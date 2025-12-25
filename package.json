@@ -24,6 +24,10 @@
       "dist/**",
       "dist-electron/**",
       "package.json"
+    ],
+    "electronLanguages": [
+      "en-US",
+      "ko"
     ]
   },
   "dependencies": {
