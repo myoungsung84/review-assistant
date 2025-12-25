@@ -32,3 +32,13 @@ out
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Vite / config generated files
+vite.config.d.ts
+vite.config.*.d.ts
+
+# TypeScript declaration outputs (config 포함)
+*.d.ts

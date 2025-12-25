@@ -1,17 +1,41 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   $schema: 'https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json',
-  appId: 'YourAppID',
+
+  // 🔹 앱 고유 ID (절대 바뀌면 안 됨)
+  appId: 'com.myoungsung.reviewassistant',
+
+  // 🔹 사용자에게 보이는 앱 이름
+  productName: 'ReviewAssistant',
+
   asar: true,
-  productName: 'YourAppName',
+
+  // 🔹 빌드 산출물 위치 (Draft 스크립트와 정확히 맞음)
   directories: {
     output: 'release/${version}',
   },
+
+  // 🔹 패키징에 포함될 파일
   files: ['dist', 'dist-electron'],
+
+  // 🔹 GitHub Release 업로드용 (정식 배포)
+  publish: [
+    {
+      provider: 'github',
+    },
+  ],
+
+  // ─────────────────────────────
+  // macOS (vX.Y.Z-all 에서만 실행)
+  // ─────────────────────────────
   mac: {
     target: ['dmg'],
     artifactName: '${productName}-Mac-${version}-Installer.${ext}',
   },
+
+  // ─────────────────────────────
+  // Windows (vX.Y.Z-win / vX.Y.Z-all)
+  // ─────────────────────────────
   win: {
     target: [
       {
@@ -21,14 +45,20 @@
     ],
     artifactName: '${productName}-Windows-${version}-Setup.${ext}',
   },
+
   nsis: {
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: false,
   },
+
+  // 🔸 Linux는 지금 안 쓰면 과감히 제거 가능
+  // 필요해질 때 다시 추가하면 됨
+  /*
   linux: {
     target: ['AppImage'],
     artifactName: '${productName}-Linux-${version}.${ext}',
   },
+  */
 }
