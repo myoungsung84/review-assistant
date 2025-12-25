@@ -19,11 +19,12 @@
     "preview": "vite preview"
   },
   "build": {
-    "win": {
-      "target": [
-        "zip"
-      ]
-    }
+    "asar": true,
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ]
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

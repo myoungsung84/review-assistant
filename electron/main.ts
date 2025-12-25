@@ -27,10 +27,20 @@ function createWindow() {
     },
   })
 
-  if (VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(VITE_DEV_SERVER_URL)
+  mainWindow.webContents.openDevTools({ mode: 'detach' })
+
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.error('[did-fail-load]', code, desc, url)
+  })
+
+  mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    console.log(`[renderer:${level}] ${message} (${sourceId}:${line})`)
+  })
+
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(app.getAppPath(), 'dist', 'index.html'))
   } else {
-    mainWindow.loadFile(path.join(RENDERER_DIST, 'index.html'))
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL!)
   }
 }
 
