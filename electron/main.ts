@@ -1,14 +1,14 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { getServerInfo, startApiServer, stopApiServer } from './server'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url))
+process.env.APP_ROOT = path.join(__dirname$1, '..')
 
-process.env.APP_ROOT = path.join(__dirname, '..')
-
-export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
-export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
-export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
+const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
+const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
+const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, 'public')
@@ -21,39 +21,61 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: path.join(__dirname$1, 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   })
-
-  mainWindow.webContents.openDevTools({ mode: 'detach' })
 
   mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
     console.error('[did-fail-load]', code, desc, url)
   })
 
   mainWindow.webContents.on('console-message', (_e, level, message, line, sourceId) => {
-    console.log(`[renderer:${level}] ${message} (${sourceId}:${line})`)
+    if (level >= 2) console.log(`[renderer:${level}] ${message} (${sourceId}:${line})`)
   })
 
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist', 'index.html'))
   } else {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL!)
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
 }
 
-app.whenReady().then(() => {
-  ipcMain.handle('app:ping', async () => 'pong')
-  createWindow()
+app.whenReady().then(async () => {
+  try {
+    await startApiServer()
+    ipcMain.handle('app:ping', async () => 'pong')
+
+    ipcMain.handle('api:getInfo', async () => {
+      const { port, baseUrl } = getServerInfo()
+      return { port, baseUrl }
+    })
+
+    createWindow()
+  } catch (err) {
+    console.error('Failed to start API server:', err)
+    return app.quit()
+  }
+})
+
+app.on('before-quit', e => {
+  e.preventDefault()
+  stopApiServer()
+    .catch(err => console.error('[api] stop error', err))
+    .finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-    mainWindow = null
-  }
+  stopApiServer()
+    .catch(err => console.error('[api] stop error', err))
+    .finally(() => {
+      if (process.platform !== 'darwin') {
+        app.quit()
+        mainWindow = null
+      }
+    })
 })
 
 app.on('activate', () => {
@@ -61,3 +83,5 @@ app.on('activate', () => {
     createWindow()
   }
 })
+
+export { MAIN_DIST, RENDERER_DIST, VITE_DEV_SERVER_URL }

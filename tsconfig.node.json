@@ -2,19 +2,19 @@
   "compilerOptions": {
     "skipLibCheck": true,
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "NodeNext",
     "target": "ES2022",
     "outDir": "dist-electron",
     "noEmit": false,
     "declaration": false,
     "strict": true,
-    "types": ["node"]
+    "types": ["node"],
+
+    "baseUrl": ".",
+    "paths": {
+      "@e/*": ["electron/*"]
+    }
   },
   "include": ["electron/**/*.ts"],
-  "exclude": [
-    "vite.config.*",
-    "dist/**",
-    "dist-electron/**",
-    "node_modules/**"
-  ]
+  "exclude": ["vite.config.*", "dist/**", "dist-electron/**", "node_modules/**"]
 }
