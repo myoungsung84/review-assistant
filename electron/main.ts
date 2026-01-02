@@ -1,12 +1,10 @@
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import { app, BrowserWindow, ipcMain } from 'electron'
 
 import { getServerInfo, startApiServer, stopApiServer } from './server'
 
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url))
-process.env.APP_ROOT = path.join(__dirname$1, '..')
+process.env.APP_ROOT = path.join(__dirname, '..')
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
@@ -23,7 +21,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname$1, 'preload.mjs'),
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -38,16 +36,20 @@ function createWindow() {
   })
 
   if (app.isPackaged) {
+    // ✅ 패키징 시에도 안전한 경로
+    // app.getAppPath()는 resources/app.asar(or app) 기준
     mainWindow.loadFile(path.join(app.getAppPath(), 'dist', 'index.html'))
   } else {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL!)
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    // ✅ dev 서버
+    mainWindow.loadURL(VITE_DEV_SERVER_URL!)
   }
+  mainWindow.webContents.openDevTools({ mode: 'detach' })
 }
 
 app.whenReady().then(async () => {
   try {
     await startApiServer()
+
     ipcMain.handle('app:ping', async () => 'pong')
 
     ipcMain.handle('api:getInfo', async () => {
@@ -58,7 +60,7 @@ app.whenReady().then(async () => {
     createWindow()
   } catch (err) {
     console.error('Failed to start API server:', err)
-    return app.quit()
+    app.quit()
   }
 })
 
@@ -81,9 +83,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
 export { MAIN_DIST, RENDERER_DIST, VITE_DEV_SERVER_URL }

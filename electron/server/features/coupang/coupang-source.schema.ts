@@ -1,11 +1,13 @@
-export type CoupangPublishPayload = {
+// coupang-source.schema.ts
+
+export type CoupangPayload = {
   url: string
   title: string
   ogImage?: string
   description?: string
   source?: string // collector name (extension 등)
   reviews: Array<{
-    content?: string
+    content: string
     author?: string
     rating?: number
     date?: string
@@ -15,88 +17,146 @@ export type CoupangPublishPayload = {
     usedSelector?: string
     foundReviewItems?: number
     notes?: string[]
+    capturedAt?: string
+    savedAt?: string
   }
 }
 
-export type CoupangNormalized = {
-  url: string
-  title: string
-  ogImage?: string
-  description?: string
-  source?: string
-  reviews: Array<{
-    content: string
-    author?: string
-    rating?: number
-    date?: string
-    helpfulCount?: number
-  }>
-  debug?: CoupangPublishPayload['debug']
+type ParseResult = { ok: true; value: CoupangPayload } | { ok: false; error: string }
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null
 }
 
-function normalizeText(s?: string, maxLen = 5000) {
+function normalizeText(s: string | undefined, maxLen = 5000): string {
   const t = (s ?? '').replace(/\s+/g, ' ').trim()
   if (!t) return ''
   return t.length > maxLen ? t.slice(0, maxLen) : t
 }
 
-function clampRating(n?: number) {
-  if (typeof n !== 'number' || !Number.isFinite(n)) return undefined
-  const v = Math.round(n)
-  if (v < 1) return 1
-  if (v > 5) return 5
-  return v
+function clampRating(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return undefined
+  const n = Math.round(v)
+  if (n < 1) return 1
+  if (n > 5) return 5
+  return n
 }
 
-function normalizeImageUrl(raw?: string) {
+function normalizeHelpfulCount(v: unknown): number | undefined {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return undefined
+  return Math.floor(v)
+}
+
+function normalizeImageUrl(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const raw = v.trim()
   if (!raw) return undefined
   if (raw.startsWith('//')) return `https:${raw}`
   return raw
 }
 
 /**
- * - 최소 검증: url/title/reviews array 여부
- * - 정규화: title 길이 제한, review content 필터링/정리, rating/helpfulCount 보정
+ * 서버가 아직 `{ savedAt, snapshot: {...} }` 형태로 받는 경우까지 여기서 흡수.
+ * - input이 flat이면 그대로 사용
+ * - input이 wrapped면 snapshot을 펼쳐서 flat으로 변환하고 debug에 meta/trace를 합침
  */
-export function parseCoupangPublishPayload(
-  input: unknown,
-): { ok: true; value: CoupangNormalized } | { ok: false; error: string } {
-  if (!input || typeof input !== 'object') return { ok: false, error: 'body must be object' }
+function unwrapToFlat(input: unknown): Record<string, unknown> | null {
+  if (!isObject(input)) return null
 
-  const p = input as Partial<CoupangPublishPayload>
+  const snap = input['snapshot']
+  if (isObject(snap)) {
+    const out: Record<string, unknown> = { ...snap }
 
-  if (!p.url || typeof p.url !== 'string') return { ok: false, error: 'url required' }
-  if (!p.title || typeof p.title !== 'string') return { ok: false, error: 'title required' }
-  if (!Array.isArray(p.reviews)) return { ok: false, error: 'reviews must be array' }
+    // trace → debug로 흡수
+    const trace = snap['trace']
+    const debugBase = isObject(snap['debug']) ? { ...snap['debug'] } : {}
 
-  const reviews = (p.reviews ?? [])
-    .map(r => {
-      const content = normalizeText(r?.content)
-      if (!content) return null
-      return {
-        content,
-        author: typeof r.author === 'string' ? r.author.trim() || undefined : undefined,
-        rating: clampRating(r.rating),
-        date: typeof r.date === 'string' ? r.date : undefined,
-        helpfulCount:
-          typeof r.helpfulCount === 'number' &&
-          Number.isFinite(r.helpfulCount) &&
-          r.helpfulCount >= 0
-            ? Math.floor(r.helpfulCount)
-            : undefined,
-      }
-    })
-    .filter((x): x is NonNullable<typeof x> => !!x)
+    if (typeof input['savedAt'] === 'string') debugBase['savedAt'] = input['savedAt']
+    if (typeof snap['capturedAt'] === 'string') debugBase['capturedAt'] = snap['capturedAt']
 
-  const normalized: CoupangNormalized = {
-    url: p.url.trim(),
-    title: normalizeText(p.title, 200),
-    ogImage: normalizeImageUrl(typeof p.ogImage === 'string' ? p.ogImage : undefined),
-    description: typeof p.description === 'string' ? p.description : undefined,
-    source: typeof p.source === 'string' ? p.source : undefined,
-    reviews,
-    debug: p.debug,
+    if (isObject(trace)) {
+      if (typeof trace['usedSelector'] === 'string')
+        debugBase['usedSelector'] = trace['usedSelector']
+      if (typeof trace['foundItems'] === 'number')
+        debugBase['foundReviewItems'] = trace['foundItems']
+    }
+
+    out['debug'] = debugBase
+    delete out['trace'] // 이제 불필요
+
+    return out
   }
 
-  return { ok: true, value: normalized }
+  return input
+}
+
+function normalizeDebug(v: unknown): CoupangPayload['debug'] | undefined {
+  if (!isObject(v)) return undefined
+
+  const out: NonNullable<CoupangPayload['debug']> = {}
+
+  if (typeof v['usedSelector'] === 'string' && v['usedSelector'].trim())
+    out.usedSelector = v['usedSelector'].trim()
+  if (typeof v['foundReviewItems'] === 'number' && Number.isFinite(v['foundReviewItems']))
+    out.foundReviewItems = Math.floor(v['foundReviewItems'])
+  if (typeof v['capturedAt'] === 'string' && v['capturedAt'].trim())
+    out.capturedAt = v['capturedAt'].trim()
+  if (typeof v['savedAt'] === 'string' && v['savedAt'].trim()) out.savedAt = v['savedAt'].trim()
+
+  if (Array.isArray(v['notes'])) {
+    const notes = v['notes']
+      .filter((x): x is string => typeof x === 'string')
+      .map(x => x.trim())
+      .filter(Boolean)
+    if (notes.length) out.notes = notes.slice(0, 50)
+  }
+
+  return Object.keys(out).length ? out : undefined
+}
+
+/**
+ * - 최소 검증: url/title/reviews array 여부
+ * - 정규화: title 길이 제한, review content 필터링/정리, rating/helpfulCount 보정
+ * - 입력은 flat / wrapped 둘 다 받음
+ */
+export function parseCoupangPublishPayload(input: unknown): ParseResult {
+  const flat = unwrapToFlat(input)
+  if (!flat) return { ok: false, error: 'body must be object' }
+
+  const url = typeof flat['url'] === 'string' ? flat['url'].trim() : ''
+  const titleRaw = typeof flat['title'] === 'string' ? flat['title'] : ''
+  const reviewsRaw = flat['reviews']
+
+  if (!url) return { ok: false, error: 'url required' }
+  if (!titleRaw) return { ok: false, error: 'title required' }
+  if (!Array.isArray(reviewsRaw)) return { ok: false, error: 'reviews must be array' }
+
+  const reviews = reviewsRaw
+    .map((r: unknown) => {
+      if (!isObject(r)) return null
+
+      const content = normalizeText(typeof r['content'] === 'string' ? r['content'] : undefined)
+      if (!content) return null
+
+      return {
+        content,
+        author: typeof r['author'] === 'string' ? r['author'].trim() || undefined : undefined,
+        rating: clampRating(r['rating']),
+        date: typeof r['date'] === 'string' ? r['date'] : undefined,
+        helpfulCount: normalizeHelpfulCount(r['helpfulCount']),
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+
+  const value: CoupangPayload = {
+    url,
+    title: normalizeText(titleRaw, 200),
+    ogImage: normalizeImageUrl(flat['ogImage']),
+    description: typeof flat['description'] === 'string' ? flat['description'] : undefined,
+    source: typeof flat['source'] === 'string' ? flat['source'] : undefined,
+    reviews,
+    debug: normalizeDebug(flat['debug']),
+  }
+
+  return { ok: true, value }
 }

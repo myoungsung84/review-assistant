@@ -1,6 +1,5 @@
 import http from 'node:http'
 
-import { authMiddleware } from './middlewares/auth'
 import { corsMiddleware } from './middlewares/cors'
 import { buildRouter } from './router'
 
@@ -18,7 +17,6 @@ export function getServerInfo(): ServerInfo {
 
 export async function startApiServer(): Promise<ServerInfo> {
   const apiPort = 17355
-  const token = '1234'
 
   if (server) return getServerInfo()
 
@@ -26,7 +24,6 @@ export async function startApiServer(): Promise<ServerInfo> {
 
   // middleware chain (순서 중요)
   router.use(corsMiddleware())
-  router.use(authMiddleware({ token: token }))
 
   server = http.createServer((req, res) => {
     void router.handle(req, res)

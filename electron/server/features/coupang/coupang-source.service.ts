@@ -1,4 +1,4 @@
-import type { CoupangNormalized } from './coupang-source.schema'
+import type { CoupangPayload } from './coupang-source.schema'
 
 export class CoupangSourceService {
   constructor(
@@ -7,10 +7,14 @@ export class CoupangSourceService {
     },
   ) {}
 
-  publishProduct = async (payload: CoupangNormalized) => {
+  publishProduct = async (payload: CoupangPayload) => {
     // Renderer로 브로드캐스트
-    this.deps.emit('COUPANG_PRODUCT_PUBLISHED', payload)
-
+    this.deps.emit('COUPANG_PRODUCT_PUBLISHED', {
+      ...payload,
+      url: payload.url,
+      reviewCount: payload.reviews.length,
+    })
+    console.log('[coupang] product published:', payload.title)
     // HTTP 응답은 요약만
     return {
       ok: true,

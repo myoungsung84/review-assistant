@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron/simple'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import electron from 'vite-plugin-electron/simple'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -33,4 +34,12 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   resolve: { alias },
+  server: {
+    proxy: {
+      '^/events($|/)': {
+        target: 'http://127.0.0.1:17355',
+        changeOrigin: true,
+      },
+    },
+  },
 }))

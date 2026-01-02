@@ -1,14 +1,21 @@
 {
   "compilerOptions": {
-    "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "NodeNext",
     "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+
     "outDir": "dist-electron",
     "noEmit": false,
     "declaration": false,
+
     "strict": true,
+    "skipLibCheck": true,
+
     "types": ["node"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
 
     "baseUrl": ".",
     "paths": {

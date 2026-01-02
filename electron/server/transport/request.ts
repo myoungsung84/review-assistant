@@ -36,12 +36,27 @@ export async function readJsonBody(req: http.IncomingMessage): Promise<unknown |
   const chunks: Buffer[] = []
 
   await new Promise<void>((resolve, reject) => {
-    req.on('data', (c: Buffer) => chunks.push(c))
+    req.on('data', (c: unknown) => {
+      if (Buffer.isBuffer(c)) {
+        chunks.push(c)
+        return
+      }
+
+      if (typeof c === 'string') {
+        // 혹시 req.setEncoding() 된 케이스까지 대응
+        chunks.push(Buffer.from(c, 'utf8'))
+        return
+      }
+
+      // 예상 밖 타입이면 문자열로라도 살려서 넣기
+      chunks.push(Buffer.from(String(c), 'utf8'))
+    })
+
     req.on('end', resolve)
     req.on('error', reject)
   })
 
-  const raw = Buffer.concat(chunks).toString('utf-8').trim()
+  const raw = Buffer.concat(chunks).toString('utf8').trim()
   if (!raw) return null
 
   try {
