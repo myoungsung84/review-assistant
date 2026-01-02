@@ -1,7 +1,8 @@
 import http from 'node:http'
-import { buildRouter } from './router'
-import { corsMiddleware } from './middlewares/cors'
+
 import { authMiddleware } from './middlewares/auth'
+import { corsMiddleware } from './middlewares/cors'
+import { buildRouter } from './router'
 
 let server: http.Server | null = null
 let port: number | null = null

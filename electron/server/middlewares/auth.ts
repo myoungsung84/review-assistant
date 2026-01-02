@@ -1,6 +1,7 @@
 import type http from 'node:http'
-import type { Middleware } from '@e/server/types/router.types'
+
 import { sendError } from '@e/server/transport/response'
+import type { Middleware } from '@e/server/types/router.types'
 
 export function authMiddleware(params: { token: string }): Middleware {
   return async (req: http.IncomingMessage, res: http.ServerResponse, _ctx, next) => {

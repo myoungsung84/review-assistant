@@ -1,4 +1,5 @@
 import type http from 'node:http'
+
 import type { Middleware } from '@e/server/types/router.types'
 
 export function corsMiddleware(): Middleware {

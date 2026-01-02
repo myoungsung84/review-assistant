@@ -1,7 +1,9 @@
-import type { Handler, Middleware, Ctx, Router } from '@e/server/types/router.types'
-import { sendError } from '@e/server/transport/response'
-import { ApiError, badRequest, internalError, notFound } from '@e/server/lib/errors'
 import { registerFeatureRoutes } from '@e/server/features'
+import { ApiError, badRequest, internalError, notFound } from '@e/server/lib/errors'
+import { sendError } from '@e/server/transport/response'
+import type { Ctx, Handler, Middleware, Router } from '@e/server/types/router.types'
+
+import { EventHub } from './transport/event-hub'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'OPTIONS'
 type RouteMethod = Exclude<HttpMethod, 'OPTIONS'>
@@ -91,7 +93,8 @@ export function buildRouter(): Router {
   }
 
   // register controllers
-  registerFeatureRoutes(router)
+  const eventHub = new EventHub()
+  registerFeatureRoutes(router, { eventHub })
 
   return router
 }

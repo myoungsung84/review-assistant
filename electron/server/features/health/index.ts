@@ -1,6 +1,7 @@
 import type { Router } from '@e/server/types/router.types'
-import { HealthController } from './health-controller'
-import { HealthService } from './health-service'
+
+import { HealthController } from './health.controller'
+import { HealthService } from './health.service'
 
 export function healthRoutes(r: Router) {
   const service = new HealthService()

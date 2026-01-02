@@ -1,6 +1,8 @@
-import { app, ipcMain, BrowserWindow } from 'electron'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import { app, BrowserWindow, ipcMain } from 'electron'
+
 import { getServerInfo, startApiServer, stopApiServer } from './server'
 
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url))
