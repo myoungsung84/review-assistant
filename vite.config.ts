@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => ({
   resolve: { alias },
   server: {
     proxy: {
-      '^/events($|/)': {
+      '/events': {
         target: 'http://127.0.0.1:17355',
         changeOrigin: true,
       },

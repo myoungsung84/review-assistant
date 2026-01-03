@@ -64,22 +64,20 @@ app.whenReady().then(async () => {
   }
 })
 
-app.on('before-quit', e => {
-  e.preventDefault()
-  stopApiServer()
-    .catch(err => console.error('[api] stop error', err))
-    .finally(() => app.quit())
+let quitCleanup: Promise<void> | null = null
+
+app.on('before-quit', () => {
+  // 여러 번 불려도 stop은 1번만 + 항상 끝날 때까지 기다리게
+  quitCleanup ??= stopApiServer().catch(err => {
+    console.error('[api] stop error', err)
+  })
+  return quitCleanup
 })
 
 app.on('window-all-closed', () => {
-  stopApiServer()
-    .catch(err => console.error('[api] stop error', err))
-    .finally(() => {
-      if (process.platform !== 'darwin') {
-        app.quit()
-        mainWindow = null
-      }
-    })
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })
 
 app.on('activate', () => {
