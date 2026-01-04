@@ -18,8 +18,15 @@ let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1400,
+    height: 980,
+
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+
+    title: 'Review Assistant',
+    backgroundColor: '#0b0f14',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
