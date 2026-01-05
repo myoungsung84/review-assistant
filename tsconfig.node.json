@@ -19,9 +19,10 @@
 
     "baseUrl": ".",
     "paths": {
-      "@e/*": ["electron/*"]
+      "@e/*": ["electron/*"],
+      "@s/*": ["shared/*"]
     }
   },
-  "include": ["electron/**/*.ts"],
+  "include": ["electron/**/*.ts", "shared/**/*.ts"],
   "exclude": ["vite.config.*", "dist/**", "dist-electron/**", "node_modules/**"]
 }

@@ -1,8 +1,12 @@
 import type http from 'node:http'
 
+import { EventChannel, EventType } from '@s/types/events'
+import { nowISO } from '@s/utils'
+import { isString } from '@s/utils/type-guards'
+
 export type AppEvent = {
-  type: string
-  payload?: unknown
+  type: EventType
+  data?: unknown
   at: string
 }
 
@@ -12,9 +16,9 @@ type Client = {
 }
 
 export class EventHub {
-  private channels = new Map<string, Map<string, Client>>()
+  private channels = new Map<EventChannel, Map<string, Client>>()
 
-  addSseClient(channel: string, res: http.ServerResponse) {
+  addSseClient(channel: EventChannel, res: http.ServerResponse) {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
     const bucket = this.getOrCreateBucket(channel)
@@ -27,12 +31,12 @@ export class EventHub {
     return id
   }
 
-  removeSseClient(channel: string, clientIdOrRes: string | http.ServerResponse) {
+  removeSseClient(channel: EventChannel, clientIdOrRes: string | http.ServerResponse) {
     const bucket = this.channels.get(channel)
     if (!bucket) return
 
     // id로 제거
-    if (typeof clientIdOrRes === 'string') {
+    if (isString(clientIdOrRes)) {
       bucket.delete(clientIdOrRes)
       if (bucket.size === 0) this.channels.delete(channel)
       return
@@ -48,21 +52,19 @@ export class EventHub {
     if (bucket.size === 0) this.channels.delete(channel)
   }
 
-  emit(channel: string, type: string, payload?: unknown) {
+  emit(channel: EventChannel, type: EventType, data?: unknown) {
     const bucket = this.channels.get(channel)
     if (!bucket || bucket.size === 0) return
 
     const message: AppEvent = {
       type,
-      payload,
-      at: new Date().toISOString(),
+      data,
+      at: nowISO(),
     }
-
-    const data = `data: ${JSON.stringify(message)}\n\n`
 
     for (const [id, client] of bucket) {
       try {
-        client.res.write(data)
+        client.res.write(`data: ${JSON.stringify(message)}\n\n`)
       } catch {
         bucket.delete(id)
       }
@@ -72,13 +74,13 @@ export class EventHub {
   }
 
   // (선택) 전 채널 브로드캐스트 필요하면
-  emitAll(type: string, payload?: unknown) {
+  emitAll(type: EventType, data?: unknown) {
     for (const channel of this.channels.keys()) {
-      this.emit(channel, type, payload)
+      this.emit(channel, type, data)
     }
   }
 
-  getClientCount(channel?: string) {
+  getClientCount(channel?: EventChannel) {
     if (!channel) {
       let total = 0
       for (const [, bucket] of this.channels) total += bucket.size
@@ -91,7 +93,7 @@ export class EventHub {
     return Array.from(this.channels.keys())
   }
 
-  private getOrCreateBucket(channel: string) {
+  private getOrCreateBucket(channel: EventChannel) {
     const existing = this.channels.get(channel)
     if (existing) return existing
 

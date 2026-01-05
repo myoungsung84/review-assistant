@@ -1,38 +1,7 @@
-// coupang-source.schema.ts
+import { CoupangCollectedData } from '@s/types/coupang'
+import { isObject, normalizeText } from '@s/utils'
 
-export type CoupangPayload = {
-  url: string
-  title: string
-  ogImage?: string
-  description?: string
-  source?: string // collector name (extension 등)
-  reviews: Array<{
-    content: string
-    author?: string
-    rating?: number
-    date?: string
-    helpfulCount?: number
-  }>
-  debug?: {
-    usedSelector?: string
-    foundReviewItems?: number
-    notes?: string[]
-    capturedAt?: string
-    savedAt?: string
-  }
-}
-
-type ParseResult = { ok: true; value: CoupangPayload } | { ok: false; error: string }
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
-
-function normalizeText(s: string | undefined, maxLen = 5000): string {
-  const t = (s ?? '').replace(/\s+/g, ' ').trim()
-  if (!t) return ''
-  return t.length > maxLen ? t.slice(0, maxLen) : t
-}
+type ParseResult = { ok: true; value: CoupangCollectedData } | { ok: false; error: string }
 
 function clampRating(v: unknown): number | undefined {
   if (typeof v !== 'number' || !Number.isFinite(v)) return undefined
@@ -90,10 +59,10 @@ function unwrapToFlat(input: unknown): Record<string, unknown> | null {
   return input
 }
 
-function normalizeDebug(v: unknown): CoupangPayload['debug'] | undefined {
+function normalizeDebug(v: unknown): CoupangCollectedData['debug'] | undefined {
   if (!isObject(v)) return undefined
 
-  const out: NonNullable<CoupangPayload['debug']> = {}
+  const out: NonNullable<CoupangCollectedData['debug']> = {}
 
   if (typeof v['usedSelector'] === 'string' && v['usedSelector'].trim())
     out.usedSelector = v['usedSelector'].trim()
@@ -148,7 +117,7 @@ export function parseCoupangPublishPayload(input: unknown): ParseResult {
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
 
-  const value: CoupangPayload = {
+  const value: CoupangCollectedData = {
     url,
     title: normalizeText(titleRaw, 200),
     ogImage: normalizeImageUrl(flat['ogImage']),

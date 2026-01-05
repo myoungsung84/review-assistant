@@ -1,13 +1,14 @@
-import type { CoupangPayload } from './coupang-source.schema'
+import { CoupangCollectedData } from '@s/types/coupang'
+import { EventChannel, EventType } from '@s/types/events'
 
 export class CoupangSourceService {
   constructor(
     private readonly deps: {
-      emit: (channel: string, type: string, payload?: unknown) => void
+      emit: (channel: EventChannel, type: EventType, payload?: unknown) => void
     },
   ) {}
 
-  publishProduct = async (payload: CoupangPayload) => {
+  publishProduct = async (payload: CoupangCollectedData) => {
     this.deps.emit('coupang', 'COUPANG_PRODUCT_PUBLISHED', {
       ...payload,
       url: payload.url,

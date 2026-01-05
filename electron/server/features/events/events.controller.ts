@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
+import { EventChannel } from '@s/types/events'
+
 import type { EventHub } from '@e/server/transport/event-hub'
 
 import type { EventsService } from './events.service'
@@ -12,13 +14,6 @@ export class EventsController {
     },
   ) {}
 
-  connect(_req: IncomingMessage, res: ServerResponse, opts: { channel: string }) {
-    console.log('[events] connect channel =', opts.channel)
-    this.setupHeaders(res)
-    this.write(res, this.deps.eventsService.buildConnectedEvent(opts.channel))
-    this.deps.eventHub.addSseClient(opts.channel, res)
-  }
-
   private setupHeaders(res: ServerResponse) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
@@ -29,5 +24,11 @@ export class EventsController {
 
   private write(res: ServerResponse, event: unknown) {
     res.write(`data: ${JSON.stringify(event)}\n\n`)
+  }
+
+  public connect(_req: IncomingMessage, res: ServerResponse, opts: { channel: EventChannel }) {
+    this.setupHeaders(res)
+    this.write(res, this.deps.eventsService.buildConnectedEvent(opts.channel))
+    this.deps.eventHub.addSseClient(opts.channel, res)
   }
 }

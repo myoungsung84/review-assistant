@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename)
 const alias = {
   '@': path.resolve(__dirname, 'src'),
   '@e': path.resolve(__dirname, 'electron'),
+  '@s': path.resolve(__dirname, 'shared'),
 }
 
 export default defineConfig(({ mode }) => ({

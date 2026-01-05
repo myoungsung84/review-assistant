@@ -1,3 +1,6 @@
+import { EventChannel } from '@s/types/events/channels'
+import { nowISO } from '@s/utils'
+
 import type { EventHub } from '@e/server/transport/event-hub'
 
 export class EventsService {
@@ -7,14 +10,14 @@ export class EventsService {
     return this.deps.eventHub.getClientCount()
   }
 
-  buildConnectedEvent(channel: string) {
+  buildConnectedEvent(channel: EventChannel) {
     return {
       type: 'CONNECTED',
-      payload: {
+      data: {
         channel,
         clientCount: this.getClientCount() + 1,
       },
-      at: new Date().toISOString(),
+      at: nowISO(),
     }
   }
 }
