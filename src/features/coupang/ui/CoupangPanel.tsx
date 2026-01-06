@@ -1,64 +1,30 @@
 import { Box, Button, Chip, Stack, Typography } from '@mui/material'
 import { AppEvent } from '@s/types/events/app.event'
-import _ from 'lodash'
-import { useCallback, useMemo } from 'react'
+import { isNil } from '@s/utils'
+import { useCallback } from 'react'
 
 import { Panel } from '@/components/layout'
 import { useCoupangEvents } from '@/features/coupang/hook/useCoupangEvents'
-import { useServerInfo } from '@/shared/hook/useServerInfo'
-import { isRecord } from '@/shared/utils/type-guards'
-
-import CoupangSourceView from './CoupangSourceView'
-
-type CoupangSourcePayload = {
-  productTitle?: string
-  reviewCount?: number
-  hasSummary?: boolean
-}
-
-function parseCoupangSourcePayload(payload: unknown): CoupangSourcePayload | null {
-  if (!isRecord(payload)) return null
-
-  const productTitle = typeof payload.productTitle === 'string' ? payload.productTitle : undefined
-  const reviewCount = typeof payload.reviewCount === 'number' ? payload.reviewCount : undefined
-  const hasSummary = typeof payload.hasSummary === 'boolean' ? payload.hasSummary : undefined
-
-  if (productTitle === undefined && reviewCount === undefined && hasSummary === undefined)
-    return null
-  return { productTitle, reviewCount, hasSummary }
-}
 
 export default function CoupangPanel() {
-  const baseUrl = useServerInfo().baseUrl
-
   const onHandlePublished = useCallback(
     (ev: Extract<AppEvent, { type: 'COUPANG_PRODUCT_PUBLISHED' }>) => {
-      const data = ev.data // ✅ CoupangCollectedData | Nil 로 좁혀짐
-      // data 사용
-      console.log(ev)
+      const data = ev.data
+      if (isNil(data)) return
+
       console.log('Coupang product published event received:', data)
     },
     [],
   )
 
-  const { status, events, isRunning } = useCoupangEvents({
-    baseUrl,
-    enabled: !_.isNil(baseUrl),
+  const { status, events, clear, isRunning } = useCoupangEvents({
     handlers: {
-      CONNECTED: ev => {
+      onConnected: ev => {
         console.log('Coupang SSE connected:', ev)
       },
-      COUPANG_PRODUCT_PUBLISHED: onHandlePublished,
+      onCoupangProductPublished: onHandlePublished,
     },
   })
-
-  const lastSource = useMemo(() => {
-    if (events.length === 0) return null
-    const hit = events.find(e => e.type === 'CONNECTED')
-    return hit ? parseCoupangSourcePayload(hit.data) : null
-  }, [events])
-
-  const hasSource = Boolean(lastSource?.productTitle)
 
   return (
     <Panel
@@ -67,8 +33,11 @@ export default function CoupangPanel() {
       actions={
         <Stack direction="row" spacing={1} alignItems="center">
           {/* 기존 액션 유지 */}
-          <Button size="small" variant="outlined" disabled={!hasSource}>
+          <Button size="small" variant="outlined" disabled={!isRunning}>
             Raw
+          </Button>
+          <Button size="small" variant="outlined" onClick={() => clear()} disabled={!isRunning}>
+            Clear
           </Button>
         </Stack>
       }
@@ -76,15 +45,7 @@ export default function CoupangPanel() {
       <Stack spacing={1}>
         <SseSummary status={status} isRunning={isRunning} eventCount={events.length} />
 
-        {hasSource ? (
-          <LoadedState
-            productTitle={lastSource?.productTitle ?? '제품명 예시'}
-            reviewCount={lastSource?.reviewCount ?? 0}
-            hasSummary={lastSource?.hasSummary ?? false}
-          />
-        ) : (
-          <EmptyState />
-        )}
+        {isRunning ? <LoadedState /> : <EmptyState />}
       </Stack>
     </Panel>
   )
@@ -124,30 +85,29 @@ function EmptyState() {
   )
 }
 
-function LoadedState(props: { productTitle: string; reviewCount: number; hasSummary: boolean }) {
-  const { productTitle, reviewCount, hasSummary } = props
+function LoadedState() {
+  return <></>
+  // return (
+  //   <Stack spacing={1} sx={{ minHeight: 0 }}>
+  //     <Stack direction="row" spacing={1} alignItems="center">
+  //       <Chip size="small" color="success" label="Included" variant="outlined" />
+  //       {hasSummary ? (
+  //         <Chip size="small" label="Summary OK" variant="outlined" />
+  //       ) : (
+  //         <Chip size="small" color="warning" label="No Summary" variant="outlined" />
+  //       )}
+  //     </Stack>
 
-  return (
-    <Stack spacing={1} sx={{ minHeight: 0 }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Chip size="small" color="success" label="Included" variant="outlined" />
-        {hasSummary ? (
-          <Chip size="small" label="Summary OK" variant="outlined" />
-        ) : (
-          <Chip size="small" color="warning" label="No Summary" variant="outlined" />
-        )}
-      </Stack>
+  //     <Typography sx={{ fontWeight: 700 }} noWrap title={productTitle}>
+  //       {productTitle}
+  //     </Typography>
 
-      <Typography sx={{ fontWeight: 700 }} noWrap title={productTitle}>
-        {productTitle}
-      </Typography>
+  //     <Stack direction="row" spacing={1}>
+  //       <Chip size="small" label={`Reviews ${reviewCount}`} variant="outlined" />
+  //       <Chip size="small" label="Source: Saved" variant="outlined" />
+  //     </Stack>
 
-      <Stack direction="row" spacing={1}>
-        <Chip size="small" label={`Reviews ${reviewCount}`} variant="outlined" />
-        <Chip size="small" label="Source: Saved" variant="outlined" />
-      </Stack>
-
-      <CoupangSourceView />
-    </Stack>
-  )
+  //     <CoupangSourceView />
+  //   </Stack>
+  // )
 }

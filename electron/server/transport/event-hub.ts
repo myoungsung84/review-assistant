@@ -1,7 +1,7 @@
 import type http from 'node:http'
 
 import { EventChannel, EventType } from '@s/types/events'
-import type { AppEvent } from '@s/types/events/app.event'
+import type { EventPayloadMap } from '@s/types/events/app.event'
 import { isString, nowISO } from '@s/utils'
 
 type Client = {
@@ -29,14 +29,12 @@ export class EventHub {
     const bucket = this.channels.get(channel)
     if (!bucket) return
 
-    // id로 제거
     if (isString(clientIdOrRes)) {
       bucket.delete(clientIdOrRes)
       if (bucket.size === 0) this.channels.delete(channel)
       return
     }
 
-    // res로 제거
     for (const [id, client] of bucket) {
       if (client.res === clientIdOrRes) {
         bucket.delete(id)
@@ -46,15 +44,21 @@ export class EventHub {
     if (bucket.size === 0) this.channels.delete(channel)
   }
 
-  emit(channel: EventChannel, type: EventType, data?: unknown) {
+  // emitTyped<T extends EventType>(channel: EventChannel, type: T, payload: EventPayloadMap[T]) {
+  //   this.emit(channel, type, payload)
+  // }
+
+  // makeEvent
+  makeEvent<T extends EventType>(type: T, data: EventPayloadMap[T]) {
+    return { type, data, at: nowISO() } as const
+  }
+
+  // emit
+  emit<T extends EventType>(channel: EventChannel, type: T, data: EventPayloadMap[T]) {
     const bucket = this.channels.get(channel)
     if (!bucket || bucket.size === 0) return
 
-    const message: AppEvent = {
-      type,
-      data,
-      at: nowISO(),
-    }
+    const message = this.makeEvent(type, data)
 
     for (const [id, client] of bucket) {
       try {
@@ -65,13 +69,6 @@ export class EventHub {
     }
 
     if (bucket.size === 0) this.channels.delete(channel)
-  }
-
-  // (선택) 전 채널 브로드캐스트 필요하면
-  emitAll(type: EventType, data?: unknown) {
-    for (const channel of this.channels.keys()) {
-      this.emit(channel, type, data)
-    }
   }
 
   getClientCount(channel?: EventChannel) {

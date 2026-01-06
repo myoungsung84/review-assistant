@@ -1,23 +1,25 @@
 import { CoupangCollectedData } from '@s/types/coupang'
-import { EventChannel, EventType } from '@s/types/events'
+import { EVENT_TYPES, EventChannel, EventType } from '@s/types/events'
+import { EventPayloadMap } from '@s/types/events/app.event'
 
 export class CoupangSourceService {
   constructor(
     private readonly deps: {
-      emit: (channel: EventChannel, type: EventType, payload?: unknown) => void
+      emit: <T extends EventType>(
+        channel: EventChannel,
+        type: T,
+        payload: EventPayloadMap[T],
+      ) => void
     },
   ) {}
 
-  publishProduct = async (payload: CoupangCollectedData) => {
+  public publishProduct = async (payload: CoupangCollectedData) => {
     console.log('[coupang-source.service] publishProduct called', payload)
-    this.deps.emit('coupang', 'COUPANG_PRODUCT_PUBLISHED', {
+    const data = {
       ...payload,
-      url: payload.url,
       reviewCount: payload.reviews.length,
-    })
-
-    console.log('[coupang] product published:', payload.title)
-
+    } satisfies EventPayloadMap[typeof EVENT_TYPES.COUPANG_PRODUCT_PUBLISHED]
+    this.deps.emit('coupang', 'COUPANG_PRODUCT_PUBLISHED', data)
     return {
       ok: true,
       title: payload.title,

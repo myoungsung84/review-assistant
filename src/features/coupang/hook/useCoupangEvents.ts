@@ -1,26 +1,26 @@
-import { AppEvent, MappedEventType } from '@s/types/events/app.event'
+import { EVENT_TYPES } from '@s/types/events'
+import { AppEvent } from '@s/types/events/app.event'
+import { isNil } from '@s/utils'
 import * as React from 'react'
 
 import { useEventStream } from '@/shared/hook/useEventStream'
+import { useServerInfo } from '@/shared/hook/useServerInfo'
+
+type ConnectedEvent = Extract<AppEvent, { type: typeof EVENT_TYPES.CONNECTED }>
+type ProductPublishedEvent = Extract<
+  AppEvent,
+  { type: typeof EVENT_TYPES.COUPANG_PRODUCT_PUBLISHED }
+>
+type UnknownEvent = Extract<AppEvent, { type: typeof EVENT_TYPES.UNKNOWN }>
 
 export type CoupangEventHandlers = Partial<{
-  [K in MappedEventType]: (ev: Extract<AppEvent, { type: K }>) => void
+  onConnected: (ev: ConnectedEvent) => void
+  onCoupangProductPublished: (ev: ProductPublishedEvent) => void
+  onUnknown: (ev: UnknownEvent) => void
 }>
 
-function callHandler(handlers: CoupangEventHandlers | undefined, ev: AppEvent) {
-  const type = ev.type
-  const handler = handlers?.[type]
-  if (!handler) return
-  ;(handler as (e: Extract<AppEvent, { type: typeof type }>) => void)(
-    ev as Extract<AppEvent, { type: typeof type }>,
-  )
-}
-
-export function useCoupangEvents(opts: {
-  baseUrl: string | null
-  enabled?: boolean
-  handlers?: CoupangEventHandlers
-}) {
+export function useCoupangEvents(opts: { handlers?: CoupangEventHandlers }) {
+  const baseUrl = useServerInfo().baseUrl
   const handlersRef = React.useRef<CoupangEventHandlers | undefined>(opts.handlers)
 
   React.useEffect(() => {
@@ -28,11 +28,27 @@ export function useCoupangEvents(opts: {
   }, [opts.handlers])
 
   const stream = useEventStream({
-    baseUrl: opts.baseUrl,
-    enabled: opts.enabled ?? true,
+    baseUrl: baseUrl,
+    enabled: !isNil(baseUrl),
     path: '/events/coupang',
     onEvent: (ev: AppEvent) => {
-      callHandler(handlersRef.current, ev)
+      switch (ev.type) {
+        case 'CONNECTED': {
+          handlersRef.current?.onConnected?.(ev)
+          return
+        }
+
+        case 'COUPANG_PRODUCT_PUBLISHED': {
+          handlersRef.current?.onCoupangProductPublished?.(ev)
+          return
+        }
+
+        default:
+        case 'UNKNOWN': {
+          handlersRef.current?.onUnknown?.(ev)
+          return
+        }
+      }
     },
   })
 

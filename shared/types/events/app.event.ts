@@ -1,19 +1,22 @@
 import type { CoupangCollectedData } from '../coupang'
+import type { EVENT_TYPES } from './event.types'
 
 export type EventPayloadMap = {
-  CONNECTED: {
+  [EVENT_TYPES.CONNECTED]: {
     clientCount: number
   }
-  COUPANG_PRODUCT_PUBLISHED: CoupangCollectedData
-  UNKNOWN: null
+  [EVENT_TYPES.COUPANG_PRODUCT_PUBLISHED]: CoupangCollectedData & {
+    reviewCount: number
+  }
+  [EVENT_TYPES.UNKNOWN]: Nil
 }
 
 export type MappedEventType = keyof EventPayloadMap
 
 export type AppEvent = {
-  [K in MappedEventType]: {
+  [K in keyof EventPayloadMap]: {
     type: K
-    data: EventPayloadMap[K] | Nil | unknown
-    at: ISODateString
+    data: EventPayloadMap[K]
+    at: string
   }
-}[MappedEventType]
+}[keyof EventPayloadMap]
