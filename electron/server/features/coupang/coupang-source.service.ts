@@ -14,7 +14,6 @@ export class CoupangSourceService {
   ) {}
 
   public publishProduct = async (payload: CoupangCollectedData) => {
-    console.log('[coupang-source.service] publishProduct called', payload)
     const data = {
       ...payload,
       reviewCount: payload.reviews.length,
