@@ -9,6 +9,7 @@ export class CoupangSourceService {
   ) {}
 
   publishProduct = async (payload: CoupangCollectedData) => {
+    console.log('[coupang-source.service] publishProduct called', payload)
     this.deps.emit('coupang', 'COUPANG_PRODUCT_PUBLISHED', {
       ...payload,
       url: payload.url,

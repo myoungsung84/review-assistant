@@ -7,7 +7,7 @@ import { CoupangSourceService } from './coupang-source.service'
 
 export function coupangSourceRoutes(r: Router, ctx: FeatureContext) {
   const service = new CoupangSourceService({
-    emit: (type, payload) => ctx.eventHub.emit(type, payload),
+    emit: ctx.eventHub.emit.bind(ctx.eventHub),
   })
   const controller = new CoupangSourceController(service)
 

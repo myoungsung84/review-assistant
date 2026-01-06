@@ -1,29 +1,40 @@
+import { AppEvent, MappedEventType } from '@s/types/events/app.event'
 import * as React from 'react'
 
-import { type StreamEvent, useEventStream } from '@/shared/hook/useEventStream'
-import { isRecord } from '@/shared/utils/type-guards'
+import { useEventStream } from '@/shared/hook/useEventStream'
 
-type ConnectedPayload = { clientCount?: number }
+export type CoupangEventHandlers = Partial<{
+  [K in MappedEventType]: (ev: Extract<AppEvent, { type: K }>) => void
+}>
 
-function parseConnectedPayload(payload: unknown): ConnectedPayload | null {
-  if (!isRecord(payload)) return null
-  const clientCount = typeof payload.clientCount === 'number' ? payload.clientCount : undefined
-  return { clientCount }
+function callHandler(handlers: CoupangEventHandlers | undefined, ev: AppEvent) {
+  const type = ev.type
+  const handler = handlers?.[type]
+  if (!handler) return
+  ;(handler as (e: Extract<AppEvent, { type: typeof type }>) => void)(
+    ev as Extract<AppEvent, { type: typeof type }>,
+  )
 }
 
-export function useCoupangEvents(opts: { baseUrl: string | null; enabled?: boolean }) {
-  const [clientCount, setClientCount] = React.useState<number | null>(null)
+export function useCoupangEvents(opts: {
+  baseUrl: string | null
+  enabled?: boolean
+  handlers?: CoupangEventHandlers
+}) {
+  const handlersRef = React.useRef<CoupangEventHandlers | undefined>(opts.handlers)
+
+  React.useEffect(() => {
+    handlersRef.current = opts.handlers
+  }, [opts.handlers])
 
   const stream = useEventStream({
     baseUrl: opts.baseUrl,
     enabled: opts.enabled ?? true,
     path: '/events/coupang',
-    onEvent: (ev: StreamEvent) => {
-      if (ev.type !== 'CONNECTED') return
-      const parsed = parseConnectedPayload(ev.payload)
-      if (parsed?.clientCount !== undefined) setClientCount(parsed.clientCount)
+    onEvent: (ev: AppEvent) => {
+      callHandler(handlersRef.current, ev)
     },
   })
 
-  return { ...stream, clientCount }
+  return { ...stream }
 }

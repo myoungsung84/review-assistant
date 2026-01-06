@@ -1,6 +1,7 @@
 export const EVENT_TYPES = {
   CONNECTED: 'CONNECTED',
   COUPANG_PRODUCT_PUBLISHED: 'COUPANG_PRODUCT_PUBLISHED',
+  UNKNOWN: 'UNKNOWN',
 } as const
 
 export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES]

@@ -1,14 +1,8 @@
 import type http from 'node:http'
 
 import { EventChannel, EventType } from '@s/types/events'
-import { nowISO } from '@s/utils'
-import { isString } from '@s/utils/type-guards'
-
-export type AppEvent = {
-  type: EventType
-  data?: unknown
-  at: string
-}
+import type { AppEvent } from '@s/types/events/app.event'
+import { isString, nowISO } from '@s/utils'
 
 type Client = {
   id: string

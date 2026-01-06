@@ -1,2 +1,2 @@
 export * from './channels'
-export * from './event-types'
+export * from './event.types'

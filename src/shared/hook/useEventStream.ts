@@ -1,38 +1,58 @@
+import type { AppEvent, EventPayloadMap } from '@s/types/events/app.event'
+import { nowISO } from '@s/utils'
+import { safeJsonParse } from '@s/utils/parser'
+import { isObject } from '@s/utils/type-guards'
 import * as React from 'react'
 
-import { safeJsonParse } from '../utils/parse'
-import { isRecord } from '../utils/type-guards'
-
 export type StreamStatus = 'idle' | 'connecting' | 'open' | 'error' | 'closed'
-
-export type StreamEvent = {
-  type: string
-  payload?: unknown
-  at?: string
-}
 
 type ResolveUrlArgs = { baseUrl: string; path: string; isDev: boolean }
 
 type Options = {
   baseUrl: string | null
-  path: string // 예: '/events/coupang'
+  path: string
   enabled?: boolean
   maxEvents?: number
   resolveUrl?: (args: ResolveUrlArgs) => string
-  onEvent?: (ev: StreamEvent) => void
+  onEvent?: (ev: AppEvent) => void
 }
 
-function toStreamEvent(raw: unknown): StreamEvent {
-  if (isRecord(raw) && typeof raw.type === 'string') {
-    const payload = 'payload' in raw ? raw.payload : undefined
-    const at = typeof raw.at === 'string' ? raw.at : undefined
-    return { type: raw.type, payload, at }
+function toStreamEvent(raw: unknown): AppEvent {
+  if (!isObject(raw)) {
+    return { type: 'UNKNOWN', data: null, at: nowISO() }
   }
-  return { type: 'MESSAGE', payload: raw, at: new Date().toISOString() }
+
+  const rawType = 'type' in raw ? raw.type : undefined
+  const at = (typeof raw.at === 'string' ? raw.at : nowISO()) as ISODateString
+  const dataRaw = 'data' in raw ? raw.data : null
+
+  const type =
+    rawType === 'CONNECTED' || rawType === 'COUPANG_PRODUCT_PUBLISHED' || rawType === 'UNKNOWN'
+      ? rawType
+      : 'UNKNOWN'
+
+  switch (type) {
+    case 'CONNECTED':
+      return {
+        type: 'CONNECTED',
+        data: (dataRaw as EventPayloadMap['CONNECTED']) ?? null,
+        at,
+      }
+
+    case 'COUPANG_PRODUCT_PUBLISHED':
+      return {
+        type: 'COUPANG_PRODUCT_PUBLISHED',
+        data: (dataRaw as EventPayloadMap['COUPANG_PRODUCT_PUBLISHED']) ?? null,
+        at,
+      }
+
+    case 'UNKNOWN':
+    default:
+      return { type: 'UNKNOWN', data: null, at }
+  }
 }
 
 function defaultResolveUrl({ baseUrl, path, isDev }: ResolveUrlArgs) {
-  // 과거 코드 호환: DEV면 상대경로(프록시/동일오리진), PROD면 baseUrl 사용
   return isDev ? path : `${baseUrl}${path}`
 }
 
@@ -48,14 +68,13 @@ export function useEventStream(opts: Options) {
 
   const esRef = React.useRef<EventSource | null>(null)
 
-  // ✅ onEvent가 매 렌더 새로 생성돼도 start/useEffect가 흔들리지 않게 ref로 고정
   const onEventRef = React.useRef<Options['onEvent']>(onEvent)
   React.useEffect(() => {
     onEventRef.current = onEvent
   }, [onEvent])
 
   const [status, setStatus] = React.useState<StreamStatus>('idle')
-  const [events, setEvents] = React.useState<StreamEvent[]>([])
+  const [events, setEvents] = React.useState<AppEvent[]>([])
 
   const stop = React.useCallback(() => {
     const es = esRef.current
@@ -68,24 +87,19 @@ export function useEventStream(opts: Options) {
       es.close()
     }
 
-    // stop은 항상 closed로
     setStatus('closed')
   }, [])
 
   const buildUrl = React.useCallback(() => {
     const isDev = import.meta.env.DEV
-    // DEV는 baseUrl 없어도 path로 붙을 수 있음(프록시 가정)
     const b = baseUrl ?? ''
     return resolveUrl({ baseUrl: b, path, isDev })
   }, [baseUrl, path, resolveUrl])
 
   const start = React.useCallback(() => {
     if (!enabled) return
-
-    // PROD인데 baseUrl 없으면 못 붙음
     if (!import.meta.env.DEV && !baseUrl) return
 
-    // 연결 중/열림 상태에서 start() 재호출해도 안전하게 재시작
     stop()
     setStatus('connecting')
 
@@ -97,10 +111,10 @@ export function useEventStream(opts: Options) {
     es.onopen = () => setStatus('open')
 
     es.onmessage = (e: MessageEvent<string>) => {
-      const raw = safeJsonParse(e.data)
-      const ev = toStreamEvent(raw)
+      // ✅ 여기서부터가 핵심: AppEvent로 “검증”하지 말고 unknown으로 받고 정규화
+      const parsed = safeJsonParse<unknown>(e.data)
+      const ev = toStreamEvent(parsed)
 
-      // ✅ ref 통해 호출 (deps에서 onEvent 제거)
       onEventRef.current?.(ev)
 
       setEvents(prev => {
@@ -110,7 +124,6 @@ export function useEventStream(opts: Options) {
     }
 
     es.onerror = () => {
-      // EventSource는 자동 재연결을 시도할 수 있음
       setStatus('error')
     }
   }, [enabled, baseUrl, maxEvents, buildUrl, stop])
@@ -120,13 +133,10 @@ export function useEventStream(opts: Options) {
       stop()
       return
     }
-
-    // PROD: baseUrl 준비 전엔 대기
     if (!import.meta.env.DEV && !baseUrl) return
 
     start()
     return stop
-    // ✅ start는 이제 stable (onEvent 빠짐) → 무한루프 방지
   }, [enabled, baseUrl, start, stop])
 
   React.useEffect(() => stop, [stop])

@@ -1,5 +1,7 @@
-import { Box, Button, Chip, Divider, Stack, Typography } from '@mui/material'
-import * as React from 'react'
+import { Box, Button, Chip, Stack, Typography } from '@mui/material'
+import { AppEvent } from '@s/types/events/app.event'
+import _ from 'lodash'
+import { useCallback, useMemo } from 'react'
 
 import { Panel } from '@/components/layout'
 import { useCoupangEvents } from '@/features/coupang/hook/useCoupangEvents'
@@ -29,21 +31,31 @@ function parseCoupangSourcePayload(payload: unknown): CoupangSourcePayload | nul
 export default function CoupangPanel() {
   const baseUrl = useServerInfo().baseUrl
 
-  // 사용자가 누르는 토글 (연결/해제는 훅이 담당)
-  const [enabled, setEnabled] = React.useState<boolean>(false)
+  const onHandlePublished = useCallback(
+    (ev: Extract<AppEvent, { type: 'COUPANG_PRODUCT_PUBLISHED' }>) => {
+      const data = ev.data // ✅ CoupangCollectedData | Nil 로 좁혀짐
+      // data 사용
+      console.log(ev)
+      console.log('Coupang product published event received:', data)
+    },
+    [],
+  )
 
-  // PROD: baseUrl 없으면 연결 불가 / DEV: 상대경로라 baseUrl 없어도 가능(프록시 전제)
-  const canUseSse = import.meta.env.DEV || baseUrl !== null
-  const sseEnabled = enabled && canUseSse
-
-  const { status, events, clear, clientCount, isRunning } = useCoupangEvents({
+  const { status, events, isRunning } = useCoupangEvents({
     baseUrl,
-    enabled: sseEnabled,
+    enabled: !_.isNil(baseUrl),
+    handlers: {
+      CONNECTED: ev => {
+        console.log('Coupang SSE connected:', ev)
+      },
+      COUPANG_PRODUCT_PUBLISHED: onHandlePublished,
+    },
   })
 
-  const lastSource = React.useMemo(() => {
-    const hit = events.find(e => e.type === 'COUPANG_SOURCE' || e.type === 'COUPANG_COLLECTED')
-    return hit ? parseCoupangSourcePayload(hit.payload) : null
+  const lastSource = useMemo(() => {
+    if (events.length === 0) return null
+    const hit = events.find(e => e.type === 'CONNECTED')
+    return hit ? parseCoupangSourcePayload(hit.data) : null
   }, [events])
 
   const hasSource = Boolean(lastSource?.productTitle)
@@ -58,47 +70,10 @@ export default function CoupangPanel() {
           <Button size="small" variant="outlined" disabled={!hasSource}>
             Raw
           </Button>
-          <Button size="small" variant="outlined">
-            Load
-          </Button>
-
-          {/* SSE 액션 */}
-          <Divider flexItem orientation="vertical" sx={{ mx: 0.5, opacity: 0.4 }} />
-
-          <Chip size="small" label={status} variant="outlined" sx={{ fontFamily: 'monospace' }} />
-
-          {typeof clientCount === 'number' ? (
-            <Chip size="small" label={`clients ${clientCount}`} variant="outlined" />
-          ) : null}
-
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => {
-              if (!canUseSse) return
-              setEnabled(true)
-            }}
-            disabled={isRunning || !canUseSse}
-          >
-            Start
-          </Button>
-
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => setEnabled(false)}
-            disabled={!isRunning}
-          >
-            Stop
-          </Button>
-
-          <Button size="small" variant="text" onClick={clear} disabled={events.length === 0}>
-            Clear
-          </Button>
         </Stack>
       }
     >
-      <Stack spacing={1.25} sx={{ minHeight: 0 }}>
+      <Stack spacing={1}>
         <SseSummary status={status} isRunning={isRunning} eventCount={events.length} />
 
         {hasSource ? (
@@ -110,25 +85,20 @@ export default function CoupangPanel() {
         ) : (
           <EmptyState />
         )}
-
-        <EventLog events={events} />
       </Stack>
     </Panel>
   )
 }
 
 function SseSummary(props: { status: string; isRunning: boolean; eventCount: number }) {
-  const { status, isRunning, eventCount } = props
+  const { isRunning } = props
+
+  const color = isRunning ? 'success' : 'warning'
+  const label = isRunning ? 'SSE ON' : 'SSE OFF'
 
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      {isRunning ? (
-        <Chip size="small" color="success" label="SSE ON" variant="outlined" />
-      ) : (
-        <Chip size="small" label="SSE OFF" variant="outlined" />
-      )}
-      <Chip size="small" label={`status ${status}`} variant="outlined" />
-      <Chip size="small" label={`events ${eventCount}`} variant="outlined" />
+      <Chip size="small" color={color} label={label} variant="outlined" />
     </Stack>
   )
 }
@@ -158,7 +128,7 @@ function LoadedState(props: { productTitle: string; reviewCount: number; hasSumm
   const { productTitle, reviewCount, hasSummary } = props
 
   return (
-    <Stack spacing={1.25} sx={{ minHeight: 0 }}>
+    <Stack spacing={1} sx={{ minHeight: 0 }}>
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip size="small" color="success" label="Included" variant="outlined" />
         {hasSummary ? (
@@ -179,61 +149,5 @@ function LoadedState(props: { productTitle: string; reviewCount: number; hasSumm
 
       <CoupangSourceView />
     </Stack>
-  )
-}
-
-function EventLog(props: { events: Array<{ type: string; payload?: unknown; at?: string }> }) {
-  const { events } = props
-
-  return (
-    <Box
-      sx={{
-        mt: 0.5,
-        p: 1,
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1,
-        bgcolor: 'background.paper',
-        minHeight: 120,
-        maxHeight: 240,
-        overflow: 'auto',
-        fontFamily: 'monospace',
-        fontSize: 12,
-      }}
-    >
-      <Typography variant="caption" sx={{ opacity: 0.7 }}>
-        Event log (dev)
-      </Typography>
-
-      {events.length === 0 ? (
-        <Typography sx={{ opacity: 0.6, mt: 0.5 }}>No events</Typography>
-      ) : (
-        <Stack spacing={0.75} sx={{ mt: 0.75 }}>
-          {events.slice(0, 50).map((ev, i) => (
-            <Box
-              key={`${ev.at ?? 'na'}-${i}`}
-              sx={{ pb: 0.75, borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Box sx={{ minWidth: 170, opacity: 0.7 }}>{ev.at ?? '-'}</Box>
-                <Box sx={{ minWidth: 160 }}>{ev.type}</Box>
-              </Box>
-              {ev.payload !== undefined ? (
-                <pre
-                  style={{
-                    margin: 0,
-                    opacity: 0.9,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {JSON.stringify(ev.payload, null, 2)}
-                </pre>
-              ) : null}
-            </Box>
-          ))}
-        </Stack>
-      )}
-    </Box>
   )
 }
