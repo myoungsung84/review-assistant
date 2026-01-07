@@ -40,7 +40,6 @@ export default function YoutubePanel() {
   return (
     <Panel
       title="YouTube"
-      badge={<Chip size="small" label="Optional" variant="outlined" />}
       actions={
         <Stack direction="row" spacing={1}>
           <Button size="small" variant="outlined" disabled={!hasAny}>

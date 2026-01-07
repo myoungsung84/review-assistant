@@ -16,7 +16,6 @@ export class CoupangSourceService {
   public publishProduct = async (payload: CoupangCollectedData) => {
     const data = {
       ...payload,
-      reviewCount: payload.reviews.length,
     } satisfies EventPayloadMap[typeof EVENT_TYPES.COUPANG_PRODUCT_PUBLISHED]
     this.deps.emit('coupang', 'COUPANG_PRODUCT_PUBLISHED', data)
     return {

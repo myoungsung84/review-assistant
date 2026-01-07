@@ -15,11 +15,18 @@ export type CoupangCollectionMeta = {
 }
 
 export type CoupangCollectedData = {
+  source?: string
   url: string
   title: string
   ogImage?: string
   description?: string
-  source?: string
+  sale?: number
+  original?: number
+  discountRate?: number
+  unitPriceText?: string | null
+  text?: string | null
   reviews: CoupangReview[]
+  reviewCount: number
+  ratingNumber: number
   debug?: CoupangCollectionMeta
 }

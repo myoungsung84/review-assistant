@@ -118,12 +118,36 @@ export function parseCoupangPublishPayload(input: unknown): ParseResult {
     .filter((x): x is NonNullable<typeof x> => x !== null)
 
   const value: CoupangCollectedData = {
+    source: typeof flat['source'] === 'string' ? flat['source'] : undefined,
     url,
     title: normalizeText(titleRaw, 200),
     ogImage: normalizeImageUrl(flat['ogImage']),
     description: typeof flat['description'] === 'string' ? flat['description'] : undefined,
-    source: typeof flat['source'] === 'string' ? flat['source'] : undefined,
+    sale:
+      typeof flat['sale'] === 'number' && Number.isFinite(flat['sale'])
+        ? Math.max(0, flat['sale'])
+        : undefined,
+    original:
+      typeof flat['original'] === 'number' && Number.isFinite(flat['original'])
+        ? Math.max(0, flat['original'])
+        : undefined,
+    discountRate:
+      typeof flat['discountRate'] === 'number' && Number.isFinite(flat['discountRate'])
+        ? Math.min(100, Math.max(0, flat['discountRate']))
+        : undefined,
+    unitPriceText:
+      typeof flat['unitPriceText'] === 'string' ? normalizeText(flat['unitPriceText'], 100) : null,
+    text: typeof flat['text'] === 'string' ? normalizeText(flat['text'], 5000) : null,
     reviews,
+    reviewCount:
+      typeof flat['reviewCount'] === 'number' && Number.isFinite(flat['reviewCount'])
+        ? Math.max(0, Math.floor(flat['reviewCount']))
+        : 0,
+    ratingNumber:
+      typeof flat['ratingNumber'] === 'number' && Number.isFinite(flat['ratingNumber'])
+        ? Math.min(5, Math.max(0, flat['ratingNumber']))
+        : 0,
+
     debug: normalizeDebug(flat['debug']),
   }
 

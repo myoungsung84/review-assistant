@@ -113,6 +113,11 @@ export function averageNullable(numbers: Array<number | null | undefined>, digit
  * @param value - 대상 숫자
  * @returns 포맷된 문자열
  */
-export function formatNumber(value: number): string {
+export function formatNumber(value: number | string): string {
+  if (typeof value === 'string') {
+    const num = Number(value)
+    if (Number.isNaN(num)) return value
+    return num.toLocaleString()
+  }
   return value.toLocaleString()
 }

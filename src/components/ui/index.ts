@@ -1,1 +1,4 @@
-export { default as ScrollArea } from './ScrollArea'
+export * from './button'
+export * from './image'
+export * from './scroll'
+export * from './text'

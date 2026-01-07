@@ -1,17 +1,17 @@
-import { Box, Divider, Stack, Typography } from '@mui/material'
+import { Box, Divider, Stack } from '@mui/material'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 
+import { TextPanelTitle } from '@/components/ui'
+
 export default function Panel({
   title,
-  badge,
   actions,
   children,
   sx,
   bodySx,
 }: {
   title: string
-  badge?: ReactNode
   actions?: ReactNode
   children: ReactNode
   sx?: SxProps<Theme>
@@ -48,29 +48,20 @@ export default function Panel({
         ...sx,
       }}
     >
-      <Box
-        sx={{
-          position: 'relative',
-          px: 1.5,
-          height: 44,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1,
-          minWidth: 0,
-          backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.08) 100%)',
-        }}
+      <Stack
+        direction={'row'}
+        spacing={1}
+        justifyContent={'space-between'}
+        alignItems={'center'}
+        p={1.5}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-          <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700 }}>
-            {title}
-          </Typography>
-          {badge}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{actions}</Box>
-      </Box>
+        <Stack direction={'row'} spacing={1}>
+          <TextPanelTitle>{title}</TextPanelTitle>
+        </Stack>
+        {actions}
+      </Stack>
 
-      <Divider sx={{ position: 'relative' }} />
+      <Divider />
 
       <Box
         sx={{

@@ -27,7 +27,6 @@ export default function PromptPanel() {
   return (
     <Panel
       title="Prompt"
-      badge={<Chip size="small" label="Optional" variant="outlined" />}
       actions={
         <Button size="small" variant="outlined">
           Templates

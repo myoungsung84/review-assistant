@@ -1,4 +1,4 @@
-import { Button, Chip, Stack, Typography } from '@mui/material'
+import { Button, Stack, Typography } from '@mui/material'
 import { useState } from 'react'
 
 import { Panel } from '@/components/layout'
@@ -16,7 +16,6 @@ export default function ResultPanel() {
   return (
     <Panel
       title="Output"
-      badge={<Chip size="small" label={toBadge(status)} variant="outlined" />}
       actions={
         <Stack direction="row" spacing={1}>
           <Button size="small" variant="outlined" disabled={status !== 'DONE'}>
@@ -36,19 +35,6 @@ export default function ResultPanel() {
       </ScrollArea>
     </Panel>
   )
-}
-
-function toBadge(status: ResultStatus) {
-  switch (status) {
-    case 'EMPTY':
-      return 'Empty'
-    case 'LOADING':
-      return 'Generating…'
-    case 'ERROR':
-      return 'Error'
-    case 'DONE':
-      return 'Draft'
-  }
 }
 
 function EmptyState() {
