@@ -42,3 +42,4 @@ vite.config.*.d.ts
 
 # TypeScript declaration outputs (config 포함)
 *.d.ts
+desktop.ini
