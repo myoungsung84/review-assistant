@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   lint_build:
@@ -19,5 +19,9 @@ jobs:
           cache: "npm"
 
       - run: npm ci --legacy-peer-deps
+
+      # Debug: make sure global.d.ts is actually included by tsconfig.node.json in CI
+      - run: npx tsc -p tsconfig.node.json --listFiles | grep global.d.ts
+
       - run: npm run lint
       - run: npm run build:electron && npm run build:renderer
