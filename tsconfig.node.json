@@ -19,11 +19,7 @@
       "@s/*": ["shared/*"]
     }
   },
-  "include": [
-    "shared/types/global.d.ts",
-    "electron/**/*.ts",
-    "shared/**/*.ts",
-    "shared/**/*.d.ts"
-  ],
+  "files": ["shared/types/global.d.ts"],
+  "include": ["electron/**/*.ts", "shared/**/*.ts"],
   "exclude": ["vite.config.*", "dist/**", "dist-electron/**", "node_modules/**"]
 }

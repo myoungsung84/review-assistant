@@ -20,8 +20,18 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
 
-      # Debug: make sure global.d.ts is actually included by tsconfig.node.json in CI
-      - run: npx tsc -p tsconfig.node.json --listFiles | grep global.d.ts
+      # Debug (won't fail the job)
+      - name: Debug - show repo paths
+        run: |
+          pwd
+          ls -la
+          ls -la shared/types || true
+
+      - name: Debug - show TypeScript config (node)
+        run: npx tsc -p tsconfig.node.json --showConfig | sed -n '1,200p'
+
+      - name: Debug - ensure global.d.ts is included (node)
+        run: npx tsc -p tsconfig.node.json --listFiles | grep -E 'global\.d\.ts|shared/types' || true
 
       - run: npm run lint
       - run: npm run build:electron && npm run build:renderer
